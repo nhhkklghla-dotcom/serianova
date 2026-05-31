@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ category }} - سيريانوغا</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .filter-sidebar { background: #f8f9fa; padding: 20px; border-radius: 12px; }
+        .sort-select { border: 1px solid #ddd; padding: 8px 15px; border-radius: 25px; }
+        .product-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.08); transition: 0.3s; margin-bottom: 25px; cursor: pointer; }
+        .product-card:hover { transform: translateY(-5px); }
+        .product-img-wrapper { height: 220px; overflow: hidden; position: relative; }
+        .product-img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+        .badge-new { position: absolute; top: 10px; right: 10px; background: #27ae60; color: #fff; padding: 3px 8px; border-radius: 15px; font-size: 11px; }
+        .badge-sale { position: absolute; top: 10px; left: 10px; background: #e74c3c; color: #fff; padding: 3px 8px; border-radius: 15px; font-size: 11px; }
+        .product-info { padding: 12px; text-align: center; }
+        .product-info h5 { font-size: 15px; margin-bottom: 5px; }
+        .price { margin: 5px 0; }
+        .current-price { color: #D4AF37; font-weight: bold; }
+        .old-price { text-decoration: line-through; color: #999; font-size: 12px; margin-right: 5px; }
+        .btn-add-cart { background: #1a1a2e; color: #fff; border: none; padding: 6px 12px; border-radius: 20px; width: 100%; margin-top: 8px; }
+        @media (max-width:768px){ .product-img-wrapper { height: 160px; } }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark fixed-top" style="background:#1a1a2e;"><div class="container"><a class="navbar-brand" href="/">سيريانوغا SERIANOVA</a><div><a href="/cart" class="text-white me-3"><i class="fas fa-shopping-bag"></i> <span id="cart-count">0</span></a><button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse"><i class="fas fa-filter"></i></button></div></div></nav>
+<div class="container mt-5 pt-5">
+    <div class="row">
+        <div class="col-lg-3 d-none d-lg-block">
+            <div class="filter-sidebar sticky-top" style="top:100px">
+                <h5>فلترة</h5><hr>
+                <form method="GET" id="filterForm">
+                    <div class="mb-3"><label>نطاق السعر (ل.س)</label><div class="d-flex gap-2"><input type="number" name="min_price" class="form-control" placeholder="الأدنى" value="{{ current_min_price if current_min_price>0 else '' }}"><input type="number" name="max_price" class="form-control" placeholder="الأقصى" value="{{ current_max_price if current_max_price<max_possible_price else '' }}"></div></div>
+                    <div class="mb-3"><label class="form-check"><input type="checkbox" name="on_sale" value="true" {% if on_sale %}checked{% endif %} class="form-check-input" onchange="this.form.submit()"> <span>عروض وتخفيضات فقط</span></label></div>
+                    <input type="hidden" name="sort" value="{{ sort_by }}">
+                    <button type="submit" class="btn btn-dark w-100">تطبيق</button>
+                    <a href="{{ url_for('products', category=category) }}" class="btn btn-outline-secondary w-100 mt-2">إعادة تعيين</a>
+                </form>
+            </div>
+        </div>
+        <div class="col-lg-9">
+            <div class="d-flex justify-content-between align-items-center mb-4"><h4>{{ category }}</h4><select class="sort-select" onchange="updateSort(this.value)"><option value="newest" {% if sort_by=='newest' %}selected{% endif %}>الأحدث</option><option value="price_asc" {% if sort_by=='price_asc' %}selected{% endif %}>السعر: من الأقل للأعلى</option><option value="price_desc" {% if sort_by=='price_desc' %}selected{% endif %}>السعر: من الأعلى للأقل</option><option value="bestseller" {% if sort_by=='bestseller' %}selected{% endif %}>الأكثر مبيعاً</option></select></div>
+            <div class="collapse mb-3" id="filterCollapse"><div class="card"><div class="card-body"><form method="GET"><div class="row"><div class="col-6"><input type="number" name="min_price" class="form-control" placeholder="أقل سعر"></div><div class="col-6"><input type="number" name="max_price" class="form-control" placeholder="أقصى سعر"></div></div><button type="submit" class="btn btn-dark w-100 mt-2">تطبيق</button></form></div></div></div>
+            <div class="row">
+                {% for product in products %}
+                <div class="col-md-4 col-6 mb-4">
+                    <div class="product-card" onclick="location.href='/product/{{ product.id }}'">
+                        <div class="product-img-wrapper"><img src="{{ product.image_url }}" alt="{{ product.name }}">{% if product.is_new %}<span class="badge-new">جديد</span>{% endif %}{% if product.old_price>0 %}<span class="badge-sale">-{{ ((1 - product.price/product.old_price)*100)|round|int }}%</span>{% endif %}</div>
+                        <div class="product-info"><h5>{{ product.name[:35] }}{% if product.name|length>35 %}...{% endif %}</h5><div class="price"><span class="current-price">{{ "{:,.0f}".format(product.price) }} ل.س</span>{% if product.old_price>0 %}<span class="old-price">{{ "{:,.0f}".format(product.old_price) }} ل.س</span>{% endif %}</div><button class="btn-add-cart" data-id="{{ product.id }}" data-name="{{ product.name }}" data-price="{{ product.price }}">أضف للسلة</button></div>
+                    </div>
+                </div>
+                {% else %}<div class="text-center py-5">لا توجد منتجات</div>{% endfor %}
+            </div>
+            {% if pagination.pages > 1 %}<nav><ul class="pagination justify-content-center">{% for page in pagination.iter_pages() %}{% if page %}<li class="page-item {% if page==pagination.page %}active{% endif %}"><a class="page-link" href="{{ url_for('products', category=category, page=page, min_price=current_min_price, max_price=current_max_price, sort=sort_by, on_sale=on_sale) }}">{{ page }}</a></li>{% else %}<li class="page-item disabled"><span class="page-link">...</span></li>{% endif %}{% endfor %}</ul></nav>{% endif %}
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function updateSort(value){ let url=new URL(window.location.href); url.searchParams.set('sort',value); window.location.href=url.toString(); }
+function updateCartBadge(){ fetch('/api/cart/count').then(r=>r.json()).then(d=>{ document.querySelectorAll('.cart-count').forEach(el=>el.innerText=d.count); }); }
+function addToCartAPI(pid){ return fetch('/api/cart/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:pid,quantity:1})}).then(r=>r.json()).then(d=>{if(d.success)updateCartBadge(); return d.success;}); }
+document.querySelectorAll('.btn-add-cart').forEach(btn=>{ btn.onclick=function(e){ e.preventDefault(); e.stopPropagation(); const id=this.dataset.id, name=this.dataset.name; if(!id)return; const old=this.innerHTML; this.innerHTML='<i class="fas fa-spinner fa-spin"></i> جاري الإضافة'; this.disabled=true; addToCartAPI(id).then(success=>{ if(success){ this.innerHTML='<i class="fas fa-check"></i> تمت الإضافة'; this.style.background='#27ae60'; alert(`✅ تمت إضافة "${name}" إلى السلة`); setTimeout(()=>{ this.innerHTML=old; this.style.background='#1a1a2e'; this.disabled=false; },1500); } else { this.innerHTML=old; this.disabled=false; alert('❌ حدث خطأ'); } }); }; });
+updateCartBadge(); setInterval(updateCartBadge,3000);
+</script>
+</body>
+</html>

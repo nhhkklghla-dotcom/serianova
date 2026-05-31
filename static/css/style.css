@@ -1,0 +1,301 @@
+/* ===== إدارة سلة التسوق وأزرار الإضافة ===== */
+function updateCartUI() {
+    fetch('/api/cart/count')
+        .then(r => r.json())
+        .then(data => {
+            const cartCountElements = document.querySelectorAll('.cart-count');
+            cartCountElements.forEach(el => el.innerText = data.count);
+        });
+}
+
+function attachCartButtons() {
+    document.querySelectorAll('.btn-add-cart').forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const productId = this.dataset.id;
+            const response = await fetch('/api/cart/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: productId, quantity: 1 })
+            });
+            const data = await response.json();
+            if (data.success) {
+                updateCartUI();
+                const originalText = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-check"></i> تمت الإضافة';
+                this.style.background = '#27ae60';
+                setTimeout(() => {
+                    this.innerHTML = originalText;
+                    this.style.background = '#1a1a2e';
+                }, 1500);
+            }
+        });
+    });
+}
+
+function updateQuantity(productId, action) {
+    fetch('/api/cart/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: productId, action: action })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) location.reload();
+    });
+}
+
+function applyCoupon() {
+    const code = document.getElementById('couponCode').value;
+    const subtotal = parseFloat(document.getElementById('subtotalValue')?.dataset.value || 0);
+    fetch('/api/apply-coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code, subtotal: subtotal })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.valid) {
+            alert(data.message);
+            location.reload();
+        } else alert(data.message);
+    });
+}
+
+function copyNumber(number) {
+    navigator.clipboard.writeText(number);
+    alert('تم نسخ رقم شام كاش: ' + number);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateCartUI();
+    attachCartButtons();
+});
+
+setInterval(updateCartUI, 5000);
+
+/* ===== تحسينات التصميم الجديدة (CSS) ===== */
+.hero {
+    background-image: url('/static/images/hero-bg.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    padding: 100px 0;
+    text-align: center;
+    color: white;
+    position: relative;
+    z-index: 1;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+}
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: -1;
+}
+
+.hero-header h1 {
+    font-size: 48px;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.hero-header p {
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+/* تحسين بطاقات المنتجات */
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 25px;
+    padding: 0 15px;
+}
+
+.product-card {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+}
+
+.product-img-wrapper {
+    height: 260px;
+    overflow: hidden;
+    position: relative;
+}
+
+.product-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s;
+}
+
+.product-card:hover .product-img-wrapper img {
+    transform: scale(1.05);
+}
+
+.badge-new, .badge-sale {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: bold;
+    z-index: 1;
+}
+
+.badge-new {
+    background: #27ae60;
+    color: white;
+}
+
+.badge-sale {
+    background: #e74c3c;
+    color: white;
+    top: 50px;
+}
+
+.product-info {
+    padding: 15px;
+    text-align: center;
+}
+
+.product-info h5 {
+    font-size: 15px;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 600;
+}
+
+.current-price {
+    color: #D4AF37;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.old-price {
+    text-decoration: line-through;
+    color: #999;
+    font-size: 13px;
+    margin-right: 8px;
+}
+
+.btn-add-cart {
+    width: 100%;
+    padding: 10px;
+    background: #1a1a2e;
+    color: rgb(200, 122, 122);
+    border: none;
+    border-radius: 25px;
+    font-weight: 600;
+    margin-top: 10px;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.btn-add-cart:hover {
+    background: #5b5130;
+    color: #1a1a2e;
+}
+
+/* تحسين نموذج الطلب */
+.order-summary-card {
+    background: #88745d;
+    border-radius: 16px;
+    padding: 25px;
+    position: sticky;
+    top: 100px;
+    box-shadow: 0 5px 20px rgba(170, 117, 117, 0.05);
+}
+
+.summary-line {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 5px 0;
+}
+
+.summary-line.total {
+    font-size: 20px;
+    font-weight: bold;
+    color: #D4AF37;
+    border-top: 2px solid #ddd;
+    padding-top: 12px;
+    margin-top: 8px;
+}
+
+.btn-checkout {
+    background: #D4AF37;
+    color: #1a1a2e;
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 40px;
+    font-weight: bold;
+    font-size: 18px;
+    transition: all 0.3s;
+}
+
+.btn-checkout:hover {
+    background: #c4a020;
+    transform: translateY(-2px);
+}
+
+.sham-cash-barcode {
+    background: white;
+    border: 2px dashed #D4AF37;
+    border-radius: 16px;
+    padding: 15px;
+    text-align: center;
+    margin: 20px 0;
+}
+
+/* استجابة للجوال */
+@media (max-width: 768px) {
+    .hero-header h1 {
+        font-size: 32px;
+    }
+    .hero-header p {
+        font-size: 16px;
+    }
+    .products-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+    .product-img-wrapper {
+        height: 180px;
+    }
+    .product-info h5 {
+        font-size: 13px;
+    }
+    .current-price {
+        font-size: 14px;
+    }
+}

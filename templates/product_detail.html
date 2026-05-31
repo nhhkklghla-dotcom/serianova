@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ product.name }} - سيريانوغا</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .main-product-image { width: 100%; border-radius: 16px; cursor: pointer; }
+        .thumbnail-images { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .thumbnail { width: 80px; height: 80px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; object-fit: cover; }
+        .thumbnail.active { border-color: #D4AF37; }
+        .image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; cursor: pointer; text-align: center; }
+        .image-modal img { max-width: 90%; max-height: 90%; margin-top: 5%; }
+        .close-modal { position: absolute; top: 20px; right: 35px; color: #fff; font-size: 40px; cursor: pointer; }
+        .nav-arrows { position: absolute; top: 50%; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; transform: translateY(-50%); }
+        .nav-arrows span { background: rgba(0,0,0,0.5); color: white; padding: 10px 15px; border-radius: 50%; cursor: pointer; font-size: 24px; }
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
+        .product-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.08); transition: 0.3s; cursor: pointer; }
+        .product-card:hover { transform: translateY(-5px); }
+        .product-img-wrapper { height: 180px; overflow: hidden; }
+        .product-img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+        .product-info { padding: 12px; text-align: center; }
+        .product-info h6 { font-size: 14px; margin-bottom: 5px; }
+        .price { font-weight: bold; color: #D4AF37; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark fixed-top" style="background: #1a1a2e; padding: 15px;">
+    <div class="container">
+        <a class="navbar-brand" href="/">سيريانوغا SERIANOVA</a>
+        <a href="/cart" class="text-white"><i class="fas fa-shopping-bag"></i> <span id="cart-count">0</span></a>
+    </div>
+</nav>
+<div class="container mt-5 pt-5">
+    <div class="row">
+        <div class="col-md-6">
+            <img id="mainImage" class="main-product-image" src="{{ product.image_url }}" alt="{{ product.name }}" onclick="openModal(0)">
+            <div class="thumbnail-images">
+                <img class="thumbnail active" src="{{ product.image_url }}" onclick="changeImage(this.src, 0)">
+                {% if product.images %}
+                    {% set images_list = product.images.split(',') %}
+                    {% for img in images_list %}
+                        {% if img %}
+                        <img class="thumbnail" src="{{ img }}" onclick="changeImage(this.src, {{ loop.index }})">
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-6">
+            <h2>{{ product.name }}</h2>
+            <div class="price my-3">
+                <span class="current-price fs-2 fw-bold text-warning">{{ "{:,.0f}".format(product.price) }} ل.س</span>
+                {% if product.old_price > 0 %}
+                <span class="old-price text-muted text-decoration-line-through ms-2">{{ "{:,.0f}".format(product.old_price) }} ل.س</span>
+                {% endif %}
+            </div>
+            <p class="text-muted">{{ product.description or 'منتج أصلي 100% مع ضمان الجودة' }}</p>
+            <div class="mb-3">
+                <label class="form-label">الكمية:</label>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-outline-secondary" onclick="decreaseQty()">-</button>
+                    <span id="qty" class="mx-3 fs-5">1</span>
+                    <button class="btn btn-outline-secondary" onclick="increaseQty()">+</button>
+                </div>
+            </div>
+            <button class="btn btn-dark w-100 py-3 fs-5 rounded-pill" id="addToCartBtn" data-id="{{ product.id }}">أضف إلى السلة</button>
+            <div class="mt-4 p-3 bg-light rounded">
+                <h6><i class="fas fa-truck"></i> معلومات الشحن</h6>
+                <small>✈️ شحن لجميع المحافظات السورية<br>💰 شام كاش: 9144145975221710<br>🔄 إرجاع خلال 14 يوم</small>
+            </div>
+        </div>
+    </div>
+    {% if related %}
+    <div class="related-products mt-5">
+        <h4>منتجات ذات صلة</h4>
+        <div class="products-grid">
+            {% for p in related %}
+            <div class="product-card" onclick="location.href='/product/{{ p.id }}'">
+                <div class="product-img-wrapper"><img src="{{ p.image_url }}" alt="{{ p.name }}"></div>
+                <div class="product-info"><h6>{{ p.name[:30] }}</h6><div class="price">{{ "{:,.0f}".format(p.price) }} ل.س</div></div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+<div id="imageModal" class="image-modal" onclick="closeModal()">
+    <span class="close-modal">&times;</span>
+    <div class="nav-arrows"><span onclick="prevImage(event)">&#10094;</span><span onclick="nextImage(event)">&#10095;</span></div>
+    <img id="modalImage" src="">
+</div>
+<script>
+let quantity = 1, currentImages = [], currentIndex = 0;
+function initImages() {
+    currentImages = ['{{ product.image_url }}'];
+    {% if product.images %}{% for img in product.images.split(',') %}{% if img %}currentImages.push('{{ img }}');{% endif %}{% endfor %}{% endif %}
+}
+function changeImage(src, idx) { document.getElementById('mainImage').src = src; currentIndex = idx; document.querySelectorAll('.thumbnail').forEach((th,i)=>th.classList.toggle('active',i===idx)); }
+function openModal(idx) { currentIndex = idx; document.getElementById('modalImage').src = currentImages[currentIndex]; document.getElementById('imageModal').style.display = 'block'; }
+function closeModal() { document.getElementById('imageModal').style.display = 'none'; }
+function nextImage(e) { e.stopPropagation(); currentIndex = (currentIndex+1)%currentImages.length; document.getElementById('modalImage').src = currentImages[currentIndex]; }
+function prevImage(e) { e.stopPropagation(); currentIndex = (currentIndex-1+currentImages.length)%currentImages.length; document.getElementById('modalImage').src = currentImages[currentIndex]; }
+function increaseQty() { quantity++; document.getElementById('qty').innerText = quantity; }
+function decreaseQty() { if (quantity>1) { quantity--; document.getElementById('qty').innerText = quantity; } }
+document.getElementById('addToCartBtn').addEventListener('click', async function() {
+    const response = await fetch('/api/cart/add', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ product_id: this.dataset.id, quantity: quantity }) });
+    const data = await response.json();
+    if (data.success) { document.getElementById('cart-count').innerText = data.cart_count; alert('تمت إضافة المنتج إلى السلة'); }
+});
+fetch('/api/cart/count').then(r=>r.json()).then(data=>{ if(data.count) document.getElementById('cart-count').innerText = data.count; });
+initImages();
+</script>
+</body>
+</html>

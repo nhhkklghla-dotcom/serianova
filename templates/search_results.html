@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نتائج البحث - سيريانوغا</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Cairo', 'Tajawal', sans-serif; background: #f8f9fa; }
+        .navbar { background: #1a1a2e; padding: 15px 0; }
+        .navbar-brand { font-size: 28px; font-weight: bold; color: #D4AF37 !important; }
+        .navbar-brand small { font-size: 12px; color: #fff; display: block; letter-spacing: 2px; }
+        .product-card { background: #fff; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.08); transition: 0.3s; margin-bottom: 30px; cursor: pointer; }
+        .product-card:hover { transform: translateY(-5px); box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
+        .product-img { height: 220px; overflow: hidden; }
+        .product-img img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
+        .product-card:hover .product-img img { transform: scale(1.05); }
+        .product-info { padding: 15px; text-align: center; }
+        .product-info h5 { font-size: 16px; margin-bottom: 8px; }
+        .product-price { color: #D4AF37; font-size: 18px; font-weight: bold; }
+        .btn-add-cart { background: #1a1a2e; color: white; border: none; padding: 6px 15px; border-radius: 25px; width: 100%; margin-top: 10px; transition: 0.3s; }
+        .btn-add-cart:hover { background: #D4AF37; color: #1a1a2e; }
+        .footer { background: #0f0f1a; color: #fff; padding: 30px 0 15px; margin-top: 40px; }
+        .footer-bottom { text-align: center; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+    <div class="container">
+        <a class="navbar-brand" href="/">سيريانوغا<small>SERIANOVA</small></a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="/">الرئيسية</a></li>
+                <li class="nav-item"><a class="nav-link" href="/products/ساعات">الساعات</a></li>
+                <li class="nav-item"><a class="nav-link" href="/cart">السلة</a></li>
+            </ul>
+            <a href="/cart" class="text-white position-relative ms-3">
+                <i class="fas fa-shopping-bag fa-lg"></i>
+                <span class="cart-count position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark" style="font-size: 10px;">0</span>
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <h3 class="mb-4">🔍 نتائج البحث عن: "{{ query }}"</h3>
+            {% if products %}
+                <div class="row">
+                    {% for product in products %}
+                    <div class="col-md-3 col-6 mb-4">
+                        <div class="product-card" onclick="location.href='/product/{{ product.id }}'">
+                            <div class="product-img">
+                                <img src="{{ product.image_url }}" alt="{{ product.name }}">
+                            </div>
+                            <div class="product-info">
+                                <h5>{{ product.name[:40] }}</h5>
+                                <div class="product-price">{{ "{:,.0f}".format(product.price) }} ل.س</div>
+                                <button class="btn-add-cart" data-id="{{ product.id }}" data-name="{{ product.name }}" data-price="{{ product.price }}">أضف للسلة</button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info text-center">⚠️ لا توجد منتجات تطابق بحثك. جرب كلمات أخرى.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<footer class="footer">
+    <div class="container text-center">
+        <div class="footer-bottom">
+            <p>© 2026 سيريانوغا - جميع الحقوق محفوظة | سوريا</p>
+            <p><small>رقم شام كاش: 9144145975221710</small></p>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// تحديث عداد السلة
+function updateCartBadge() {
+    fetch('/api/cart/count').then(r=>r.json()).then(data=>{
+        document.querySelectorAll('.cart-count').forEach(el=>el.innerText=data.count);
+    }).catch(e=>console.error(e));
+}
+
+// إضافة إلى السلة
+function addToCartAPI(productId) {
+    return fetch('/api/cart/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: productId, quantity: 1 })
+    }).then(r=>r.json()).then(data=>{
+        if(data.success) updateCartBadge();
+        return data.success;
+    });
+}
+
+// ربط الأزرار
+document.querySelectorAll('.btn-add-cart').forEach(btn => {
+    btn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = this.dataset.id;
+        const name = this.dataset.name;
+        const oldHTML = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        this.disabled = true;
+        addToCartAPI(id).then(success => {
+            if(success) {
+                this.innerHTML = '<i class="fas fa-check"></i> تمت الإضافة';
+                this.style.background = '#27ae60';
+                alert(`✅ تمت إضافة "${name}" إلى السلة`);
+                setTimeout(() => {
+                    this.innerHTML = oldHTML;
+                    this.style.background = '#1a1a2e';
+                    this.disabled = false;
+                }, 1500);
+            } else {
+                this.innerHTML = oldHTML;
+                this.disabled = false;
+                alert('❌ حدث خطأ، حاول مرة أخرى');
+            }
+        });
+    };
+});
+
+updateCartBadge();
+</script>
+</body>
+</html>
